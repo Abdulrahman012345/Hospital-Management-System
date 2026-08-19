@@ -1,0 +1,109 @@
+{% extends 'hospital/base.html' %}
+{% block title %}Appointments — MediCare HMS{% endblock %}
+{% block breadcrumb %}Appointments{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Appointments</h1>
+    <p class="page-subtitle">{{ appointments.count }} record{{ appointments.count|pluralize }}</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'appointment_create' %}" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%;">
+    <select name="status" class="form-input" style="min-width:160px;">
+      <option value="">All Statuses</option>
+      <option value="Pending" {% if status == 'Pending' %}selected{% endif %}>Pending</option>
+      <option value="Scheduled" {% if status == 'Scheduled' %}selected{% endif %}>Scheduled</option>
+      <option value="Completed" {% if status == 'Completed' %}selected{% endif %}>Completed</option>
+      <option value="Cancelled" {% if status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+      <option value="No-Show" {% if status == 'No-Show' %}selected{% endif %}>No-Show</option>
+    </select>
+    <input type="date" name="date" value="{{ date_filter }}" class="form-input" style="min-width:160px;">
+    <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+    {% if status or date_filter %}<a href="{% url 'appointment_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Clear</a>{% endif %}
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          {% if user.role != 'patient' %}<th>Patient</th>{% endif %}
+          {% if user.role != 'doctor' %}<th>Doctor</th>{% endif %}
+          <th>Date & Time</th>
+          <th>Status</th>
+          <th>Reason</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for appt in appointments %}
+        <tr>
+          <td class="td-id">#{{ appt.appointment_id }}</td>
+          {% if user.role != 'patient' %}
+          <td>
+            <div class="avatar-chip">
+              <div class="chip-avatar chip-teal">{{ appt.patient.name|first }}</div>
+              <span class="td-name">{{ appt.patient.name }}</span>
+            </div>
+          </td>
+          {% endif %}
+          {% if user.role != 'doctor' %}
+          <td>
+            <div class="avatar-chip">
+              <div class="chip-avatar chip-blue">{{ appt.doctor.name|first }}</div>
+              <div>
+                <div class="td-name">Dr. {{ appt.doctor.name }}</div>
+                <div class="text-muted text-sm">{{ appt.doctor.specialization }}</div>
+              </div>
+            </div>
+          </td>
+          {% endif %}
+          <td class="text-sm">
+            <span style="font-weight:600;">{{ appt.appointment_date|date:"M d, Y" }}</span><br>
+            <span class="text-muted">{{ appt.appointment_time|time:"h:i A" }}</span>
+          </td>
+          <td>
+            {% if appt.status == 'Scheduled' %}<span class="badge badge-blue">{{ appt.status }}</span>
+            {% elif appt.status == 'Completed' %}<span class="badge badge-green">{{ appt.status }}</span>
+            {% elif appt.status == 'Cancelled' %}<span class="badge badge-rose">{{ appt.status }}</span>
+            {% elif appt.status == 'Pending' %}<span class="badge badge-amber">{{ appt.status }}</span>
+            {% elif appt.status == 'No-Show' %}<span class="badge badge-gray">{{ appt.status }}</span>
+            {% else %}<span class="badge badge-gray">{{ appt.status }}</span>{% endif %}
+          </td>
+          <td class="text-sm text-muted">{{ appt.reason|default:"—"|truncatechars:35 }}</td>
+          <td>
+            <div class="actions-cell">
+              <a href="{% url 'appointment_detail' appt.pk %}" class="btn btn-ghost btn-sm btn-icon" title="View"><i class="fas fa-eye"></i></a>
+              {% if user.role != 'patient' %}
+              <a href="{% url 'appointment_edit' appt.pk %}" class="btn btn-ghost btn-sm btn-icon" title="Edit"><i class="fas fa-edit"></i></a>
+              {% endif %}
+              {% if user.role == 'admin' %}
+              <a href="{% url 'appointment_delete' appt.pk %}" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="empty-icon"><i class="fas fa-calendar-times"></i></div>
+              <div class="empty-title">No appointments found</div>
+              <div class="empty-text">{% if status or date_filter %}Try different filters{% else %}Book the first appointment{% endif %}</div>
+              <a href="{% url 'appointment_create' %}" class="btn btn-primary" style="margin-top:16px;"><i class="fas fa-plus"></i> Book Now</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

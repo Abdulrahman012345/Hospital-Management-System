@@ -1,0 +1,111 @@
+{% extends 'hospital/base.html' %}
+{% block title %}{{ title }} — MediCare HMS{% endblock %}
+{% block breadcrumb %}{{ title }}{% endblock %}
+{% block content %}
+<div style="max-width:780px;margin:0 auto;">
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 class="page-title">{{ title }}</h1>
+      {% if subtitle %}<p class="page-subtitle">{{ subtitle }}</p>{% endif %}
+    </div>
+    <div class="page-header-actions">
+      <a href="{% url back_url %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">
+        <i class="fas fa-{{ icon|default:'edit' }}"></i> {{ title }}
+      </span>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-grid">
+          {% for field in form %}
+          <div class="form-group {% if field.field.widget.attrs.rows %}full-width{% endif %}" {% if field.field.widget.attrs.rows %}style="grid-column:1/-1;"{% endif %}>
+            <label class="form-label" for="{{ field.id_for_label }}">
+              {{ field.label }}
+              {% if field.field.required %}<span style="color:var(--rose);margin-left:2px;">*</span>{% endif %}
+            </label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="form-error">{{ field.errors.0 }}</div>
+            {% endif %}
+            {% if field.help_text %}
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:3px;">{{ field.help_text }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-error" style="margin-top:16px;">
+          <i class="fas fa-exclamation-circle"></i>{{ form.non_field_errors.0 }}
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:12px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+          <a href="{% url back_url %}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Django automatically assigns IDs based on the field name prefixed with 'id_'
+    const patientField = document.getElementById('id_patient');
+    const appointmentField = document.getElementById('id_appointment');
+
+    // Only run this script if both fields exist on the page (e.g., the Bill Form)
+    if (patientField && appointmentField) {
+      
+      function updateAppointments() {
+        const patientId = patientField.value;
+        const currentApptId = appointmentField.value; // Save in case we are editing a bill
+        
+        // Clear the current options
+        appointmentField.innerHTML = '<option value="">---------</option>';
+
+        if (patientId) {
+          // Fetch the matching appointments from our new URL
+          fetch(`/ajax/load-appointments/?patient_id=${patientId}`)
+            .then(response => response.json())
+            .then(data => {
+              data.forEach(appt => {
+                const option = document.createElement('option');
+                option.value = appt.id;
+                option.textContent = appt.text;
+                
+                // If we are editing a bill, keep the current appointment selected
+                if (appt.id == currentApptId) {
+                  option.selected = true;
+                }
+                
+                appointmentField.appendChild(option);
+              });
+            })
+            .catch(error => console.error('Error fetching appointments:', error));
+        }
+      }
+
+      // 1. Run when the user changes the patient dropdown
+      patientField.addEventListener('change', updateAppointments);
+
+      // 2. Run once when the page loads (useful for the "Edit Bill" page)
+      if (patientField.value) {
+        updateAppointments();
+      } else {
+        // If creating a new bill, start with an empty appointment dropdown
+        appointmentField.innerHTML = '<option value="">---------</option>';
+      }
+    }
+  });
+</script>
+{% endblock %}

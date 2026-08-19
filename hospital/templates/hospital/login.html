@@ -1,0 +1,38 @@
+{% extends 'hospital/base.html' %}
+{% block title %}Sign In — MediCare HMS{% endblock %}
+{% block auth_content %}
+<div class="auth-card">
+  <div class="auth-card-header">
+    <div class="auth-logo"><i class="fas fa-heartbeat"></i></div>
+    <div class="auth-title">MediCare HMS</div>
+    <div class="auth-subtitle">Sign in to your account</div>
+  </div>
+  <div class="auth-card-body">
+    <form method="post" class="auth-form">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        {{ form.username }}
+        {% if form.username.errors %}<div class="form-error">{{ form.username.errors.0 }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        {{ form.password }}
+        {% if form.password.errors %}<div class="form-error">{{ form.password.errors.0 }}</div>{% endif %}
+      </div>
+      {% if form.non_field_errors %}
+      <div class="alert alert-error">
+        <i class="fas fa-exclamation-circle"></i>{{ form.non_field_errors.0 }}
+      </div>
+      {% endif %}
+      <button type="submit" class="auth-submit"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+    </form>
+    <div class="auth-footer">
+      Don't have an account? <a href="{% url 'register' %}">Create one</a>
+    </div>
+    <div class="auth-footer" style="margin-top:12px;padding-top:12px;border-top:1px solid #E2E8F0;font-size:0.78rem;color:#94A3B8;">
+      <strong>Demo:</strong> admin / admin123 &nbsp;|&nbsp; doctor / doctor123 &nbsp;|&nbsp; patient / patient123
+    </div>
+  </div>
+</div>
+{% endblock %}

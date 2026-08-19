@@ -1,0 +1,134 @@
+{% extends 'hospital/base.html' %}
+{% block title %}Appointment #{{ appointment.appointment_id }} — MediCare HMS{% endblock %}
+{% block breadcrumb %}<a href="{% url 'appointment_list' %}" style="color:var(--text-muted);">Appointments</a> / #{{ appointment.appointment_id }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Appointment #{{ appointment.appointment_id }}</h1>
+    <p class="page-subtitle">{{ appointment.patient.name }} with Dr. {{ appointment.doctor.name }}</p>
+  </div>
+  <div class="page-header-actions">
+    {% if user.role in 'admin,doctor' %}
+      {% if appointment.status == 'Pending' %}
+      <form method="post" style="display:inline;">{% csrf_token %}<input type="hidden" name="action" value="accept"><button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Accept</button></form>
+      <form method="post" style="display:inline;">{% csrf_token %}<input type="hidden" name="action" value="reject"><button type="submit" class="btn btn-danger"><i class="fas fa-times"></i> Reject</button></form>
+      {% elif appointment.status == 'Scheduled' %}
+      <form method="post" style="display:inline;">{% csrf_token %}<input type="hidden" name="action" value="complete"><button type="submit" class="btn btn-primary"><i class="fas fa-check-double"></i> Mark Complete</button></form>
+      {% endif %}
+      {% if user.role != 'patient' %}<a href="{% url 'appointment_edit' appointment.pk %}" class="btn btn-secondary"><i class="fas fa-edit"></i> Edit</a>{% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+  <!-- Appointment Info -->
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-info-circle"></i> Appointment Details</span>
+      {% if appointment.status == 'Scheduled' %}<span class="badge badge-blue">{{ appointment.status }}</span>
+      {% elif appointment.status == 'Completed' %}<span class="badge badge-green">{{ appointment.status }}</span>
+      {% elif appointment.status == 'Cancelled' %}<span class="badge badge-rose">{{ appointment.status }}</span>
+      {% elif appointment.status == 'Pending' %}<span class="badge badge-amber">{{ appointment.status }}</span>
+      {% else %}<span class="badge badge-gray">{{ appointment.status }}</span>{% endif %}
+    </div>
+    <div class="card-body">
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Date</div><div class="detail-value">{{ appointment.appointment_date|date:"D, M d Y" }}</div></div>
+        <div class="detail-item"><div class="detail-label">Time</div><div class="detail-value">{{ appointment.appointment_time|time:"h:i A" }}</div></div>
+        <div class="detail-item"><div class="detail-label">Doctor</div><div class="detail-value">Dr. {{ appointment.doctor.name }}</div></div>
+        <div class="detail-item"><div class="detail-label">Specialization</div><div class="detail-value"><span class="spec-tag">{{ appointment.doctor.specialization }}</span></div></div>
+      </div>
+      {% if appointment.reason %}
+      <div style="margin-top:16px;">
+        <div class="detail-label">Reason / Chief Complaint</div>
+        <div style="margin-top:6px;padding:12px 14px;background:var(--surface-2);border-radius:var(--radius-sm);border-left:3px solid var(--teal);font-size:0.875rem;color:var(--text-secondary);">{{ appointment.reason }}</div>
+      </div>
+      {% endif %}
+      {% if appointment.notes %}
+      <div style="margin-top:12px;">
+        <div class="detail-label">Doctor's Notes</div>
+        <div style="margin-top:6px;padding:12px 14px;background:var(--blue-light);border-radius:var(--radius-sm);border-left:3px solid var(--blue);font-size:0.875rem;color:var(--text-secondary);">{{ appointment.notes }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Patient Info -->
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-user"></i> Patient Information</span>
+      <a href="{% url 'patient_detail' appointment.patient.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-external-link-alt"></i></a>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+        <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--teal),#0EA5E9);color:white;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;font-family:'Outfit',sans-serif;">{{ appointment.patient.name|first }}</div>
+        <div>
+          <div style="font-family:'Outfit',sans-serif;font-size:1rem;font-weight:700;">{{ appointment.patient.name }}</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);">{{ appointment.patient.age }} yrs · {{ appointment.patient.gender }}</div>
+        </div>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Blood Group</div><div class="detail-value">{% if appointment.patient.blood_group %}<span class="badge badge-rose">{{ appointment.patient.blood_group }}</span>{% else %}—{% endif %}</div></div>
+        <div class="detail-item"><div class="detail-label">Contact</div><div class="detail-value font-mono">{{ appointment.patient.contact }}</div></div>
+        {% if appointment.patient.emergency_contact %}
+        <div class="detail-item"><div class="detail-label">Emergency</div><div class="detail-value font-mono">{{ appointment.patient.emergency_contact }}</div></div>
+        {% endif %}
+        {% if appointment.patient.address %}
+        <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value">{{ appointment.patient.address|truncatechars:50 }}</div></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Prescriptions -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title"><i class="fas fa-pills"></i> Prescriptions ({{ prescriptions.count }})</span>
+  </div>
+  <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+    {% for rx in prescriptions %}
+    <div class="rx-card">
+      <div class="rx-info">
+        <div class="rx-medicine"><i class="fas fa-capsules" style="color:var(--teal);margin-right:6px;"></i>{{ rx.medicine }}</div>
+        <div class="rx-meta">{{ rx.dosage }} &nbsp;·&nbsp; {{ rx.duration }}</div>
+        {% if rx.instructions %}<div class="rx-meta" style="margin-top:3px;color:var(--text-secondary);">{{ rx.instructions }}</div>{% endif %}
+      </div>
+      {% if user.role in 'admin,doctor' %}
+      <form method="post" action="{% url 'prescription_delete' rx.pk %}">{% csrf_token %}
+        <button type="submit" class="btn btn-danger btn-sm btn-icon" onclick="return confirm('Remove prescription?')"><i class="fas fa-times"></i></button>
+      </form>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="empty-state" style="padding:30px;"><div class="empty-icon"><i class="fas fa-prescription-bottle"></i></div><div class="empty-title">No prescriptions yet</div></div>
+    {% endfor %}
+
+    {% if user.role in 'admin,doctor' and appointment.status != 'Cancelled' %}
+    <div style="border-top:1px solid var(--border);padding-top:18px;margin-top:6px;">
+      <div style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:14px;"><i class="fas fa-plus-circle" style="color:var(--teal);margin-right:6px;"></i>Add Prescription</div>
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
+          <div class="form-group">
+            <label class="form-label">Medicine</label>
+            {{ form.medicine }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dosage</label>
+            {{ form.dosage }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Duration</label>
+            {{ form.duration }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instructions</label>
+            {{ form.instructions }}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:12px;"><i class="fas fa-plus"></i> Add Prescription</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

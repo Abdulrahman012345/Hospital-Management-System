@@ -1,0 +1,76 @@
+{% extends 'hospital/base.html' %}
+{% block title %}Doctors — MediCare HMS{% endblock %}
+{% block breadcrumb %}Doctors{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Doctors</h1>
+    <p class="page-subtitle">{{ doctors.count }} physician{{ doctors.count|pluralize }} registered</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'doctor_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Doctor</a>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;width:100%;">
+    <div class="search-input-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search by name..." class="form-input search-input">
+    </div>
+    <select name="spec" class="form-input" style="min-width:180px;">
+      <option value="">All Specializations</option>
+      {% for s in specializations %}
+      <option value="{{ s }}" {% if spec == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+    {% if q or spec %}<a href="{% url 'doctor_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Clear</a>{% endif %}
+  </form>
+</div>
+
+{% if doctors %}
+<div class="cards-grid">
+  {% for doc in doctors %}
+  <div class="profile-card">
+    <div class="profile-card-top">
+      <div class="profile-card-avatar chip-blue">
+        {{ doc.name|first }}{{ doc.name.split.1|first|default:"" }}
+      </div>
+      <div class="profile-card-name">Dr. {{ doc.name }}</div>
+      <div class="profile-card-sub">{{ doc.specialization }}</div>
+      <div style="position:absolute;top:12px;right:12px;">
+        <span class="badge" style="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);">{{ doc.experience_years }} yrs</span>
+      </div>
+    </div>
+    <div class="profile-card-body">
+      <div class="profile-card-meta">
+        {% if doc.contact %}
+        <div class="profile-meta-row"><i class="fas fa-phone"></i>{{ doc.contact }}</div>
+        {% endif %}
+        {% if doc.email %}
+        <div class="profile-meta-row"><i class="fas fa-envelope"></i>{{ doc.email }}</div>
+        {% endif %}
+        <div class="profile-meta-row"><i class="fas fa-calendar-week"></i>{{ doc.available_days }}</div>
+        <div class="profile-meta-row"><i class="fas fa-calendar-check"></i>{{ doc.total_appointments }} appointment{{ doc.total_appointments|pluralize }}</div>
+      </div>
+    </div>
+    <div class="profile-card-footer">
+      <a href="{% url 'doctor_detail' doc.pk %}" class="btn btn-secondary btn-sm"><i class="fas fa-eye"></i> View</a>
+      <a href="{% url 'doctor_edit' doc.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-edit"></i></a>
+      <a href="{% url 'doctor_delete' doc.pk %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="card-body">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-user-md"></i></div>
+    <div class="empty-title">No doctors found</div>
+    <div class="empty-text">{% if q or spec %}Try a different search{% else %}Add your first doctor{% endif %}</div>
+    {% if not q and not spec %}<a href="{% url 'doctor_create' %}" class="btn btn-primary" style="margin-top:16px;"><i class="fas fa-plus"></i> Add Doctor</a>{% endif %}
+  </div>
+</div></div>
+{% endif %}
+{% endblock %}

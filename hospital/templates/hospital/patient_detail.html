@@ -1,0 +1,118 @@
+{% extends 'hospital/base.html' %}
+{% block title %}{{ patient.name }} — MediCare HMS{% endblock %}
+{% block breadcrumb %}<a href="{% url 'patient_list' %}" style="color:var(--text-muted);">Patients</a> / {{ patient.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">{{ patient.name }}</h1>
+    <p class="page-subtitle">Patient ID #{{ patient.patient_id }} · Registered {{ patient.registered_on|date:"M d, Y" }}</p>
+  </div>
+  <div class="page-header-actions">
+    {% if user.role == 'admin' %}
+    <a href="{% url 'patient_edit' patient.pk %}" class="btn btn-secondary"><i class="fas fa-edit"></i> Edit</a>
+    <a href="{% url 'patient_delete' patient.pk %}" class="btn btn-danger"><i class="fas fa-trash"></i></a>
+    {% endif %}
+    <a href="{% url 'appointment_create' %}" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:300px 1fr;gap:20px;">
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div class="card">
+      <div style="background:linear-gradient(135deg,#0D1B2A,#162032);padding:28px 20px;text-align:center;">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#8B5CF6,#EC4899);color:white;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;font-family:'Outfit',sans-serif;margin:0 auto 12px;border:3px solid rgba(255,255,255,0.15);">
+          {{ patient.name|first }}
+        </div>
+        <div style="font-family:'Outfit',sans-serif;font-size:1rem;font-weight:700;color:white;">{{ patient.name }}</div>
+        <div style="font-size:0.78rem;color:rgba(255,255,255,0.5);margin-top:4px;">{{ patient.age }} yrs · {{ patient.gender }}</div>
+        {% if patient.blood_group %}<div style="margin-top:10px;"><span class="badge badge-rose">{{ patient.blood_group }}</span></div>{% endif %}
+      </div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="profile-meta-row"><i class="fas fa-phone" style="color:var(--teal);width:16px;"></i>{{ patient.contact }}</div>
+          {% if patient.email %}<div class="profile-meta-row"><i class="fas fa-envelope" style="color:var(--teal);width:16px;"></i>{{ patient.email }}</div>{% endif %}
+          {% if patient.emergency_contact %}<div class="profile-meta-row"><i class="fas fa-exclamation-triangle" style="color:var(--amber);width:16px;"></i>{{ patient.emergency_contact }}</div>{% endif %}
+          {% if patient.address %}<div class="profile-meta-row"><i class="fas fa-map-marker-alt" style="color:var(--teal);width:16px;"></i>{{ patient.address|truncatechars:60 }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title"><i class="fas fa-coins"></i> Billing Summary</span></div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span class="text-muted text-sm">Total Billed</span><span style="font-weight:700;font-family:'Outfit',sans-serif;">₹{{ total_billed|floatformat:2 }}</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span class="text-muted text-sm">Total Paid</span><span style="font-weight:700;color:var(--green);font-family:'Outfit',sans-serif;">₹{{ total_paid|floatformat:2 }}</span></div>
+          <div style="height:1px;background:var(--border);"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span class="text-sm font-600">Balance Due</span><span style="font-weight:800;color:var(--rose);font-family:'Outfit',sans-serif;">₹{{ total_billed|add:"-"|add:total_paid|default:"0.00" }}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-calendar-alt"></i> Appointment History</span>
+        <a href="{% url 'appointment_create' %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Book</a>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>#</th><th>Doctor</th><th>Date & Time</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+          <tbody>
+            {% for appt in appointments %}
+            <tr>
+              <td class="td-id">#{{ appt.appointment_id }}</td>
+              <td><div class="avatar-chip"><div class="chip-avatar chip-blue">{{ appt.doctor.name|first }}</div><div><div class="td-name">Dr. {{ appt.doctor.name }}</div><div class="text-muted text-sm">{{ appt.doctor.specialization }}</div></div></div></td>
+              <td class="text-sm">{{ appt.appointment_date|date:"M d, Y" }}<br><span class="text-muted">{{ appt.appointment_time|time:"h:i A" }}</span></td>
+              <td>
+                {% if appt.status == 'Scheduled' %}<span class="badge badge-blue">{{ appt.status }}</span>
+                {% elif appt.status == 'Completed' %}<span class="badge badge-green">{{ appt.status }}</span>
+                {% elif appt.status == 'Cancelled' %}<span class="badge badge-rose">{{ appt.status }}</span>
+                {% elif appt.status == 'Pending' %}<span class="badge badge-amber">{{ appt.status }}</span>
+                {% else %}<span class="badge badge-gray">{{ appt.status }}</span>{% endif %}
+              </td>
+              <td class="text-sm text-muted">{{ appt.notes|default:"—"|truncatechars:30 }}</td>
+              <td><a href="{% url 'appointment_detail' appt.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="empty-state"><div class="empty-title">No appointments</div></div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-file-invoice-dollar"></i> Bills</span>
+        {% if user.role == 'admin' %}<a href="{% url 'bill_create' %}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add Bill</a>{% endif %}
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Bill #</th><th>Date</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for bill in bills %}
+            <tr>
+              <td class="td-id">#{{ bill.bill_id }}</td>
+              <td class="text-sm">{{ bill.bill_date|date:"M d, Y" }}</td>
+              <td style="font-weight:600;">₹{{ bill.amount }}</td>
+              <td style="color:var(--green);">₹{{ bill.paid_amount }}</td>
+              <td style="font-weight:600;color:var(--rose);">₹{{ bill.balance }}</td>
+              <td>
+                {% if bill.status == 'Paid' %}<span class="badge badge-green">Paid</span>
+                {% elif bill.status == 'Pending' %}<span class="badge badge-amber">Pending</span>
+                {% elif bill.status == 'Partially Paid' %}<span class="badge badge-blue">Partial</span>
+                {% else %}<span class="badge badge-gray">{{ bill.status }}</span>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="empty-state"><div class="empty-title">No bills</div></div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'hospital/base.html' %}
+{% block title %}Confirm Delete — MediCare HMS{% endblock %}
+{% block breadcrumb %}Delete {{ type }}{% endblock %}
+{% block content %}
+<div class="confirm-wrapper">
+  <div class="confirm-card">
+    <div class="confirm-icon"><i class="fas fa-trash-alt"></i></div>
+    <div class="confirm-title">Delete {{ type }}?</div>
+    <div class="confirm-text">
+      You are about to permanently delete <strong>{{ object }}</strong>.<br>
+      This action cannot be undone.
+    </div>
+    <div class="confirm-actions">
+      <a href="{% url back_url %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Cancel</a>
+      <form method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Yes, Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

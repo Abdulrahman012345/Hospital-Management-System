@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}MediCare HMS{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+{% load static %}
+<link rel="stylesheet" href="{% static 'hospital/css/hms.css' %}">
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if user.is_authenticated %}
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fas fa-heartbeat"></i></div>
+      <div class="logo-text">
+        <span class="logo-name">MediCare</span>
+        <span class="logo-sub">HMS</span>
+      </div>
+    </div>
+    <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+  </div>
+
+  <div class="sidebar-user">
+    <div class="user-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+    <div class="user-info">
+      <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+      <span class="user-role role-{{ user.role }}">{{ user.role|title }}</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <i class="fas fa-th-large"></i><span>Dashboard</span>
+    </a>
+
+    {% if user.role == 'admin' %}
+    <div class="nav-section">Management</div>
+    <a href="{% url 'doctor_list' %}" class="nav-item {% if 'doctor' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-user-md"></i><span>Doctors</span>
+    </a>
+    <a href="{% url 'patient_list' %}" class="nav-item {% if 'patient' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-users"></i><span>Patients</span>
+    </a>
+    {% endif %}
+
+    {% if user.role == 'doctor' %}
+    <div class="nav-section">My Practice</div>
+    <a href="{% url 'patient_list' %}" class="nav-item {% if 'patient' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-users"></i><span>Patients</span>
+    </a>
+    {% endif %}
+
+    <div class="nav-section">{% if user.role == 'patient' %}My{% else %}Schedule{% endif %}</div>
+    <a href="{% url 'appointment_list' %}" class="nav-item {% if 'appointment' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-calendar-check"></i><span>Appointments</span>
+    </a>
+
+    {% if user.role != 'doctor' %}
+    <div class="nav-section">Finance</div>
+    <a href="{% url 'bill_list' %}" class="nav-item {% if 'bill' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-file-invoice-dollar"></i><span>Billing</span>
+    </a>
+    {% endif %}
+
+    <div class="nav-section">Account</div>
+
+    
+    <a href="{% url 'change_password' %}" class="nav-item {% if request.resolver_match.url_name == 'change_password' %}active{% endif %}">
+      <i class="fas fa-key"></i><span>Change Password</span>
+    </a>
+    
+    
+    <a href="{% url 'logout' %}" class="nav-item nav-logout">
+      <i class="fas fa-sign-out-alt"></i><span>Sign Out</span>
+    </a>
+  </nav>
+</aside>
+
+<div class="main-wrapper" id="mainWrapper">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="topbar-toggle" id="topbarToggle"><i class="fas fa-bars"></i></button>
+      <div class="breadcrumb">
+        <span>{% block breadcrumb %}Dashboard{% endblock %}</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
+      <div class="topbar-user">
+        <div class="topbar-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-content">
+    {% if messages %}
+    <div class="messages-container">
+      {% for message in messages %}
+      
+        {% if 'credentials' in message.tags %}
+          <div class="credential-box" style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #10B981; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: #065F46; font-size: 1.1rem;"><i class="fas fa-check-circle"></i> Account Created!</strong>
+              <button type="button" onclick="this.closest('.credential-box').remove()" style="background: none; border: none; cursor: pointer; color: #64748B; font-size: 1.2rem;"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <p style="color: #475569; font-size: 0.95rem; margin: 0;">Please copy the login details below. The user will be required to change their password upon logging in.</p>
+            
+            <div style="background: #F1F5F9; padding: 12px 16px; border-radius: 6px; font-family: monospace; font-size: 1.05rem; color: #0F172A; display: flex; justify-content: space-between; align-items: center; border: 1px solid #E2E8F0;">
+              <span id="cred-text-{{ forloop.counter }}">{{ message }}</span>
+              <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('cred-text-{{ forloop.counter }}').innerText); this.innerHTML='<i class=\'fas fa-check\'></i> Copied!';" class="btn btn-primary btn-sm" style="margin-left: 16px; white-space: nowrap;">
+                <i class="fas fa-copy"></i> Copy
+              </button>
+            </div>
+            
+          </div>
+          
+        {% else %}
+          <div class="alert alert-{{ message.tags }}">
+            <i class="fas {% if 'success' in message.tags %}fa-check-circle{% elif 'error' in message.tags %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+            {{ message }}
+            <button class="alert-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+          </div>
+        {% endif %}
+        
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{% else %}
+<main class="auth-wrapper">
+  {% if messages %}
+  <div class="auth-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+      <i class="fas {% if 'success' in message.tags %}fa-check-circle{% elif 'error' in message.tags %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+      {{ message }}
+      <button class="alert-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% block auth_content %}{% endblock %}
+</main>
+{% endif %}
+
+{% load static %}
+<script src="{% static 'hospital/js/hms.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

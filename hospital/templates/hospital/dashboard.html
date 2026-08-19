@@ -1,0 +1,444 @@
+{% extends 'hospital/base.html' %}
+{% block title %}Dashboard — MediCare HMS{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+{% if role == 'admin' %}
+<!-- ═══════════════ ADMIN DASHBOARD ═══════════════ -->
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Admin Dashboard</h1>
+    <p class="page-subtitle">Welcome back! Here's what's happening today.</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'appointment_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> New Appointment</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card teal">
+    <div class="stat-top">
+      <div class="stat-icon"><i class="fas fa-users"></i></div>
+    </div>
+    <div class="stat-value" data-value="{{ total_patients }}">0</div>
+    <div class="stat-label">Total Patients</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-top">
+      <div class="stat-icon"><i class="fas fa-user-md"></i></div>
+    </div>
+    <div class="stat-value" data-value="{{ total_doctors }}">0</div>
+    <div class="stat-label">Active Doctors</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="stat-top">
+      <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+    </div>
+    <div class="stat-value" data-value="{{ today_appointments }}">0</div>
+    <div class="stat-label">Today's Appointments</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-top">
+      <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+    </div>
+    <div class="stat-value" data-value="{{ completed_today }}">0</div>
+    <div class="stat-label">Completed Today</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-top">
+      <div class="stat-icon"><i class="fas fa-clock"></i></div>
+    </div>
+    <div class="stat-value" data-value="{{ pending_appointments }}">0</div>
+    <div class="stat-label">Pending Requests</div>
+  </div>
+  <div class="stat-card rose">
+    <div class="stat-top">
+      <div class="stat-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+    </div>
+    <div class="stat-value" data-value="{{ pending_bills }}">0</div>
+    <div class="stat-label">Unpaid Bills</div>
+  </div>
+</div>
+
+<div class="dash-grid">
+  <!-- Recent Appointments -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="fas fa-calendar-alt"></i> Recent Appointments</span>
+      <a href="{% url 'appointment_list' %}" class="btn btn-secondary btn-sm">View All</a>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Patient</th>
+            <th>Doctor</th>
+            <th>Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for appt in recent_appointments %}
+          <tr>
+            <td class="td-id">#{{ appt.appointment_id }}</td>
+            <td>
+              <div class="avatar-chip">
+                <div class="chip-avatar chip-teal">{{ appt.patient.name|first }}</div>
+                <span class="td-name">{{ appt.patient.name }}</span>
+              </div>
+            </td>
+            <td class="text-muted">Dr. {{ appt.doctor.name }}</td>
+            <td class="text-sm">{{ appt.appointment_date|date:"M d, Y" }}</td>
+            <td>
+              {% if appt.status == 'Scheduled' %}<span class="badge badge-blue">{{ appt.status }}</span>
+              {% elif appt.status == 'Completed' %}<span class="badge badge-green">{{ appt.status }}</span>
+              {% elif appt.status == 'Cancelled' %}<span class="badge badge-rose">{{ appt.status }}</span>
+              {% elif appt.status == 'Pending' %}<span class="badge badge-amber">{{ appt.status }}</span>
+              {% else %}<span class="badge badge-gray">{{ appt.status }}</span>{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><i class="fas fa-calendar"></i></div><div class="empty-title">No appointments yet</div></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <!-- Revenue -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-chart-bar"></i> Revenue (6 Months)</span>
+      </div>
+      <div class="card-body">
+        <div style="font-family:'Outfit',sans-serif;font-size:1.6rem;font-weight:800;color:var(--text-primary);margin-bottom:4px;">
+          ₹{{ total_revenue|floatformat:0 }}
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px;">Total collected</div>
+        {% if monthly_data %}
+        {% with max_rev=monthly_data.0.revenue %}
+        <div class="mini-bar-chart">
+          {% for m in monthly_data %}
+          <div class="bar-item">
+            {% if m.revenue > 0 %}
+            <div class="bar-fill" data-height="{% widthratio m.revenue 1 1 %}" style="height:4px;" id="bar{{forloop.counter}}"></div>
+            {% else %}
+            <div class="bar-fill" style="height:4px;"></div>
+            {% endif %}
+            <div class="bar-label">{{ m.month }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endwith %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Upcoming -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-clock"></i> Upcoming</span>
+      </div>
+      <div class="card-body" style="padding:0;">
+        {% for appt in upcoming %}
+        <a href="{% url 'appointment_detail' appt.pk %}" style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);transition:background var(--transition);" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+          <div style="width:40px;height:40px;border-radius:10px;background:var(--teal-light);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;text-align:center;flex-shrink:0;font-family:'Outfit',sans-serif;">
+            {{ appt.appointment_date|date:"d" }}<br><span style="font-size:0.6rem;">{{ appt.appointment_date|date:"M" }}</span>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ appt.patient.name }}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Dr. {{ appt.doctor.name }} · {{ appt.appointment_time|time:"h:i A" }}</div>
+          </div>
+          {% if appt.status == 'Pending' %}<span class="badge badge-amber">Pending</span>{% else %}<span class="badge badge-blue">{{ appt.status }}</span>{% endif %}
+        </a>
+        {% empty %}
+        <div class="empty-state" style="padding:30px 20px;">
+          <div class="empty-icon"><i class="fas fa-calendar-check"></i></div>
+          <div class="empty-title">No upcoming appointments</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Patients -->
+<div class="card" style="margin-top:20px;">
+  <div class="card-header">
+    <span class="card-title"><i class="fas fa-user-plus"></i> Recently Registered Patients</span>
+    <a href="{% url 'patient_list' %}" class="btn btn-secondary btn-sm">View All</a>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Name</th><th>Age / Gender</th><th>Blood Group</th><th>Contact</th><th>Registered</th><th></th></tr></thead>
+      <tbody>
+        {% for p in recent_patients %}
+        <tr>
+          <td>
+            <div class="avatar-chip">
+              <div class="chip-avatar chip-purple">{{ p.name|first }}</div>
+              <span class="td-name">{{ p.name }}</span>
+            </div>
+          </td>
+          <td>{{ p.age }} yrs / {{ p.gender }}</td>
+          <td>{% if p.blood_group %}<span class="badge badge-rose">{{ p.blood_group }}</span>{% else %}—{% endif %}</td>
+          <td class="text-muted font-mono text-sm">{{ p.contact }}</td>
+          <td class="text-sm text-muted">{{ p.registered_on|date:"M d, Y" }}</td>
+          <td><a href="{% url 'patient_detail' p.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty-state"><div class="empty-title">No patients yet</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% elif role == 'doctor' %}
+<!-- ═══════════════ DOCTOR DASHBOARD ═══════════════ -->
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Good {% now "G" as hour %}{% if hour < 12 %}Morning{% elif hour < 17 %}Afternoon{% else %}Evening{% endif %}, Dr. {{ doctor.name }}!</h1>
+    <p class="page-subtitle">{{ doctor.specialization }} · {{ doctor.experience_years }} yrs experience</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'appointment_list' %}" class="btn btn-primary"><i class="fas fa-calendar"></i> My Schedule</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card teal">
+    <div class="stat-top"><div class="stat-icon"><i class="fas fa-hourglass-half"></i></div></div>
+    <div class="stat-value" data-value="{{ pending }}">0</div>
+    <div class="stat-label">Pending Requests</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-top"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div></div>
+    <div class="stat-value" data-value="{{ scheduled }}">0</div>
+    <div class="stat-label">Scheduled</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-top"><div class="stat-icon"><i class="fas fa-check-circle"></i></div></div>
+    <div class="stat-value" data-value="{{ completed }}">0</div>
+    <div class="stat-label">Completed</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-top"><div class="stat-icon"><i class="fas fa-calendar-day"></i></div></div>
+    <div class="stat-value" data-value="{{ today_appts.count }}">0</div>
+    <div class="stat-label">Today's Visits</div>
+  </div>
+</div>
+
+<div class="dash-grid">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="fas fa-clock"></i> Upcoming Appointments</span>
+      <a href="{% url 'appointment_list' %}" class="btn btn-secondary btn-sm">All</a>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>#</th><th>Patient</th><th>Date & Time</th><th>Reason</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for appt in upcoming %}
+          <tr>
+            <td class="td-id">#{{ appt.appointment_id }}</td>
+            <td>
+              <div class="avatar-chip">
+                <div class="chip-avatar chip-teal">{{ appt.patient.name|first }}</div>
+                <div>
+                  <div class="td-name">{{ appt.patient.name }}</div>
+                  <div class="text-muted text-sm">{{ appt.patient.age }}y · {{ appt.patient.gender }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="text-sm">{{ appt.appointment_date|date:"M d" }} · {{ appt.appointment_time|time:"h:i A" }}</td>
+            <td class="text-sm text-muted">{{ appt.reason|default:"—"|truncatechars:30 }}</td>
+            <td>
+              {% if appt.status == 'Pending' %}<span class="badge badge-amber">Pending</span>
+              {% elif appt.status == 'Scheduled' %}<span class="badge badge-blue">Scheduled</span>
+              {% else %}<span class="badge badge-gray">{{ appt.status }}</span>{% endif %}
+            </td>
+            <td><a href="{% url 'appointment_detail' appt.pk %}" class="btn btn-primary btn-sm">View</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6"><div class="empty-state"><div class="empty-icon"><i class="fas fa-calendar"></i></div><div class="empty-title">No upcoming appointments</div></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title"><i class="fas fa-calendar-day"></i> Today's Patients</span></div>
+    <div class="card-body" style="padding:0;">
+      {% for appt in today_appts %}
+      <a href="{% url 'appointment_detail' appt.pk %}" style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);transition:background var(--transition);" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+        <div class="chip-avatar chip-blue">{{ appt.patient.name|first }}</div>
+        <div>
+          <div style="font-size:0.875rem;font-weight:600;color:var(--text-primary);">{{ appt.patient.name }}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);">{{ appt.appointment_time|time:"h:i A" }}</div>
+        </div>
+        {% if appt.status == 'Pending' %}<span class="badge badge-amber" style="margin-left:auto;">Pending</span>
+        {% elif appt.status == 'Scheduled' %}<span class="badge badge-blue" style="margin-left:auto;">Scheduled</span>
+        {% elif appt.status == 'Completed' %}<span class="badge badge-green" style="margin-left:auto;">Done</span>{% endif %}
+      </a>
+      {% empty %}
+      <div class="empty-state" style="padding:30px;"><div class="empty-icon"><i class="fas fa-couch"></i></div><div class="empty-title">No patients today</div></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% elif role == 'patient' %}
+<!-- ═══════════════ PATIENT DASHBOARD ═══════════════ -->
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Hello, {{ patient.name }}!</h1>
+    <p class="page-subtitle">Patient ID #{{ patient.patient_id }} · {{ patient.blood_group|default:"Blood group not set" }}</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'appointment_create' %}" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card teal">
+    <div class="stat-top"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div></div>
+    <div class="stat-value" data-value="{{ my_appointments.count }}">0</div>
+    <div class="stat-label">Total Appointments</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-top"><div class="stat-icon"><i class="fas fa-clock"></i></div></div>
+    <div class="stat-value" data-value="{{ upcoming.count }}">0</div>
+    <div class="stat-label">Upcoming</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-top"><div class="stat-icon"><i class="fas fa-file-invoice"></i></div></div>
+    <div class="stat-value" data-value="{{ total_billed|floatformat:0 }}" data-prefix="₹">₹0</div>
+    <div class="stat-label">Total Billed</div>
+  </div>
+  <div class="stat-card rose">
+    <div class="stat-top"><div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div></div>
+    <div class="stat-value" data-value="{{ balance_due|floatformat:0 }}" data-prefix="₹">₹0</div>
+    <div class="stat-label">Balance Due</div>
+  </div>
+</div>
+
+<div class="dash-grid">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="fas fa-calendar-alt"></i> My Appointments</span>
+      <a href="{% url 'appointment_list' %}" class="btn btn-secondary btn-sm">View All</a>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>#</th><th>Doctor</th><th>Date</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for appt in my_appointments %}
+          <tr>
+            <td class="td-id">#{{ appt.appointment_id }}</td>
+            <td>
+              <div class="avatar-chip">
+                <div class="chip-avatar chip-blue">{{ appt.doctor.name|first }}</div>
+                <div>
+                  <div class="td-name">Dr. {{ appt.doctor.name }}</div>
+                  <div class="text-muted text-sm">{{ appt.doctor.specialization }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="text-sm">{{ appt.appointment_date|date:"M d, Y" }}<br><span class="text-muted">{{ appt.appointment_time|time:"h:i A" }}</span></td>
+            <td>
+              {% if appt.status == 'Scheduled' %}<span class="badge badge-blue">{{ appt.status }}</span>
+              {% elif appt.status == 'Completed' %}<span class="badge badge-green">{{ appt.status }}</span>
+              {% elif appt.status == 'Cancelled' %}<span class="badge badge-rose">{{ appt.status }}</span>
+              {% elif appt.status == 'Pending' %}<span class="badge badge-amber">{{ appt.status }}</span>
+              {% else %}<span class="badge badge-gray">{{ appt.status }}</span>{% endif %}
+            </td>
+            <td><a href="{% url 'appointment_detail' appt.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><i class="fas fa-calendar"></i></div><div class="empty-title">No appointments yet</div><a href="{% url 'appointment_create' %}" class="btn btn-primary btn-sm" style="margin-top:12px;">Book Now</a></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+<div style="display:flex;flex-direction:column;gap:20px;">
+    {% if patient %}
+    <div class="card">
+      <div class="card-header"><span class="card-title"><i class="fas fa-user"></i> My Profile</span>
+        <a href="{% url 'patient_detail' patient.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+      </div>
+      <div class="card-body">
+        <div class="detail-grid" style="grid-template-columns:1fr 1fr;">
+          <div class="detail-item"><div class="detail-label">Age</div><div class="detail-value">{{ patient.age }} years</div></div>
+          <div class="detail-item"><div class="detail-label">Gender</div><div class="detail-value">{{ patient.gender }}</div></div>
+          <div class="detail-item"><div class="detail-label">Blood Group</div><div class="detail-value">{% if patient.blood_group %}<span class="badge badge-rose">{{ patient.blood_group }}</span>{% else %}—{% endif %}</div></div>
+          <div class="detail-item"><div class="detail-label">Contact</div><div class="detail-value">{{ patient.contact }}</div></div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="card-body">
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fas fa-user-times"></i></div>
+          <div class="empty-title">Profile Not Found</div>
+          <p style="color: #64748B; font-size: 0.9rem;">No patient profile is linked to this account.</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title"><i class="fas fa-file-invoice-dollar"></i> Recent Bills</span>
+        <a href="{% url 'bill_list' %}" class="btn btn-secondary btn-sm">All Bills</a>
+      </div>
+      <div class="card-body" style="padding:0;">
+        {% for bill in my_bills %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Bill #{{ bill.bill_id }}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">{{ bill.bill_date|date:"M d, Y" }}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.9rem;font-weight:700;color:var(--text-primary);">₹{{ bill.amount }}</div>
+            {% if bill.status == 'Paid' %}<span class="badge badge-green">Paid</span>
+            {% elif bill.status == 'Pending' %}<span class="badge badge-amber">Pending</span>
+            {% else %}<span class="badge badge-gray">{{ bill.status }}</span>{% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state" style="padding:30px;"><div class="empty-title">No bills found</div></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="empty-state"><div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
+  <div class="empty-title">{{ error|default:"Unknown role" }}</div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Animate bars relative to max
+const bars = document.querySelectorAll('.bar-fill');
+const vals = [{% for m in monthly_data %}{{ m.revenue }},{% endfor %}];
+if (vals.length) {
+  const maxV = Math.max(...vals, 1);
+  bars.forEach((bar, i) => {
+    if (vals[i] !== undefined) {
+      setTimeout(() => { bar.style.height = Math.max((vals[i]/maxV)*100, 3) + '%'; }, 300 + i*80);
+    }
+  });
+}
+</script>
+{% endblock %}
