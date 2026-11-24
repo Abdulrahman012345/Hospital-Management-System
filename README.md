@@ -197,7 +197,7 @@ http://127.0.0.1:8000/
 
 ## 📄 License
 
-This project is developed for educational and portfolio purposes.
+This project is for educational purposes. Feel free to use and modify as needed.
 
 ## 👨‍💻 Developer
 
